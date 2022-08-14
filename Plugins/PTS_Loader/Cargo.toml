@@ -1,0 +1,13 @@
+[package]
+name = "pts_loader"
+version = "0.1.0"
+edition = "2021"
+authors = ["sp4ghet"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "pts_loader"
+crate-type = ["lib", "cdylib"]
+path = "src/lib.rs"
+
+[dependencies]

@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 9ac397ca540e4034aa5a3f03f1af1921
+ScriptedImporter:
+  internalIDToNameTable: []
+  externalObjects: {}
+  serializedVersion: 2
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+  script: {fileID: 11500000, guid: 198511b6a7670044092234d8facb6b2b, type: 3}
+  position: {x: 11850, y: 0, z: -37800}
+  rotation: {x: -90, y: 0, z: 0}
+  scale: {x: 1, y: 1, z: 1}
+  mat: {fileID: 2100000, guid: 6a6b27afeb018df4186a37a0fd1a9846, type: 2}
