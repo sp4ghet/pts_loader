@@ -1,5 +1,4 @@
-use std::{ffi::CStr, os::raw::c_char};
-
+pub mod clib;
 pub mod load;
 
 #[repr(C)]
@@ -22,19 +21,4 @@ pub struct PtsPoint {
 pub struct Buffer {
     pub buf: *mut PtsPoint,
     pub len: usize,
-}
-
-#[no_mangle]
-pub extern "C" fn load_from_file(path: *const c_char, _buf: &mut *mut PtsPoint, _len: &mut usize) {
-    let path = unsafe { CStr::from_ptr(path) }.to_str().unwrap();
-    let mut points = load::from_file(path);
-    *_buf = points.as_mut_ptr();
-    *_len = points.len();
-    std::mem::forget(points);
-}
-
-#[no_mangle]
-pub extern "C" fn free_pts(buf: *mut PtsPoint, len: usize) {
-    let data = unsafe { Vec::from_raw_parts(buf, len, len) }.to_owned();
-    drop(data);
 }

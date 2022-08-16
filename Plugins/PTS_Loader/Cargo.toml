@@ -11,3 +11,6 @@ crate-type = ["lib", "cdylib"]
 path = "src/lib.rs"
 
 [dependencies]
+num = "*"
+num-traits = "*"
+anyhow = "*"

@@ -1,10 +1,11 @@
 use std::time::Instant;
 
+use anyhow::Result;
 use pts_loader;
 
-fn main() {
+fn main() -> Result<()> {
     let start = Instant::now();
-    let points = pts_loader::load::from_file("tests/fixtures/ShibuyaUnderground.pts");
+    let points = pts_loader::load::from_file("tests/fixtures/ShibuyaUnderground.pts")?;
     let done = Instant::now();
     let dur = done.duration_since(start);
     println!(
@@ -13,4 +14,6 @@ fn main() {
         dur.as_millis(),
         points.len() as f32 / dur.as_millis() as f32
     );
+
+    Ok(())
 }
