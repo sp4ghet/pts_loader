@@ -33,7 +33,7 @@ fn load_no_header_file() {
         Ok(_) => panic!("Read invalid file as valid"),
         Err(e) => {
             assert_eq!(
-                "Couldn't find row count in first line of tests/fixtures/invalid_no_header.pts",
+                "Couldn't find row count in first line of tests/fixtures/invalid_no_header.pts, got -0.41025 -2.0806 8.00981 55 52 44 65",
                 format!("{}", e)
             );
         }

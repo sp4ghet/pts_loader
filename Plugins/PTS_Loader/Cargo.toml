@@ -1,5 +1,5 @@
 [package]
-name = "pts_loader"
+name = "pcl_loader"
 version = "0.1.0"
 edition = "2021"
 authors = ["sp4ghet"]
@@ -14,3 +14,6 @@ path = "src/lib.rs"
 num = "*"
 num-traits = "*"
 anyhow = "*"
+pbr = "1.0.*"
+rayon = "1.5.*"
+lazy_static = "1.4.*"
