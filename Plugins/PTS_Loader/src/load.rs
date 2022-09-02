@@ -3,7 +3,7 @@ use num_traits::Num;
 use pbr::ProgressBar;
 use rayon::prelude::*;
 use std::fs;
-use std::io::Read;
+use std::io::{BufRead, BufReader};
 use std::sync::{Arc, Mutex};
 use std::{fmt::Display, str::FromStr};
 
@@ -43,25 +43,21 @@ where
 }
 
 pub fn from_file(path: &str) -> Result<Vec<PtsPoint>> {
-    let mut file = fs::File::open(path).with_context(|| format!("Failed to load file {}", path))?;
-    let mut contents = String::with_capacity(file.metadata()?.len() as _);
-    file.read_to_string(&mut contents)?;
-    let mut lines = contents.lines();
+    let file = fs::File::open(path).with_context(|| format!("Failed to load file {}", path))?;
+    let buffer_cap = (2_usize.pow(23)).min(file.metadata()?.len() as _); // ~80 MB max
+    let mut file = BufReader::with_capacity(buffer_cap, file);
 
-    let count_str = lines.next().ok_or(LoadError::InvalidInputError(format!(
-        "No data in file {}",
-        path
-    )))?;
+    let mut line = String::with_capacity(64);
+    file.read_line(&mut line)
+        .map_err(|_e| LoadError::InvalidInputError(format!("No data in file {}", path)))?;
 
-    let count = parse_str::<usize>(&count_str.trim()).with_context(|| {
+    let count_str = line.trim();
+    let count = parse_str::<usize>(count_str).with_context(|| {
         format!(
             "Couldn't find row count in first line of {}, got {}",
             path, count_str
         )
     })?;
-
-    let i = std::sync::atomic::AtomicUsize::new(0);
-    let pb = Arc::new(Mutex::new(ProgressBar::new(count as _)));
 
     lazy_static! {
         static ref SPACE: char = ' ';
@@ -74,35 +70,65 @@ pub fn from_file(path: &str) -> Result<Vec<PtsPoint>> {
         static ref B_ERR: LoadError = LoadError::InvalidInputError(format!("No B color value"));
     }
 
-    let points: Result<Vec<PtsPoint>> = lines
-        .par_bridge()
-        .map(|line| {
-            let mut tokens = line.split(*SPACE);
+    let pb = Arc::new(Mutex::new(ProgressBar::new(count as _)));
+    let pb_counter = std::sync::atomic::AtomicUsize::new(0);
 
-            let x = parse_str::<f32>(tokens.next().ok_or(&*X_ERR)?)?;
-            let y = parse_str::<f32>(tokens.next().ok_or(&*Y_ERR)?)?;
-            let z = parse_str::<f32>(tokens.next().ok_or(&*Z_ERR)?)?;
+    let mut points = Vec::with_capacity(count);
 
-            let intensity = parse_str::<i32>(tokens.next().ok_or(&*I_ERR)?)?;
-            let r = parse_str::<u8>(tokens.next().ok_or(&*R_ERR)?)?;
-            let g = parse_str::<u8>(tokens.next().ok_or(&*G_ERR)?)?;
-            let b = parse_str::<u8>(tokens.next().ok_or(&*B_ERR)?)?;
-
-            let point = PtsPoint {
-                point: Vec3::<f32> { x, y, z },
-                intensity,
-                rgb: Vec3::<u8> { x: r, y: g, z: b },
-            };
-
-            let prev_count = i.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-            if prev_count % 500_000 == 0 {
-                let mut pb = pb.lock().unwrap();
-                pb.set(prev_count as _);
+    // assume roughly 40 chars per line
+    // better to be conservative here
+    let batch_size = buffer_cap / 15;
+    let mut batch = vec![String::new(); batch_size];
+    let mut i = 0;
+    while i < count {
+        // drain the buffer into a batch
+        let mut j = 0;
+        let mut k = 0;
+        while j < buffer_cap {
+            let line = &mut batch[k];
+            line.clear();
+            let res = file.read_line(line)?;
+            j += res;
+            if res == 0 || k + 1 == batch.len() {
+                break;
             }
-            Ok(point)
-        })
-        .collect();
-    pb.lock().unwrap().finish();
+            i += 1;
+            k += 1;
+        }
 
-    points
+        // parse the batch
+        let points_batch: Result<Vec<PtsPoint>> = batch
+            .par_iter()
+            .take(k)
+            .map(|line| {
+                let mut tokens = line.trim().split(*SPACE);
+
+                let x = parse_str::<f32>(tokens.next().ok_or(&*X_ERR)?)?;
+                let y = parse_str::<f32>(tokens.next().ok_or(&*Y_ERR)?)?;
+                let z = parse_str::<f32>(tokens.next().ok_or(&*Z_ERR)?)?;
+
+                let intensity = parse_str::<i32>(tokens.next().ok_or(&*I_ERR)?)?;
+                let r = parse_str::<u8>(tokens.next().ok_or(&*R_ERR)?)?;
+                let g = parse_str::<u8>(tokens.next().ok_or(&*G_ERR)?)?;
+                let b = parse_str::<u8>(tokens.next().ok_or(&*B_ERR)?)?;
+
+                let point = PtsPoint {
+                    point: Vec3::<f32> { x, y, z },
+                    intensity,
+                    rgb: Vec3::<u8> { x: r, y: g, z: b },
+                };
+
+                let idx = pb_counter.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                if idx % 500_000 == 0 {
+                    pb.lock().unwrap().set(idx as _);
+                }
+                Ok(point)
+            })
+            .collect();
+        let points_batch = points_batch?;
+        points.par_extend(points_batch);
+    }
+
+    pb.lock().unwrap().finish();
+    Ok(points)
 }

@@ -1,5 +1,4 @@
-use pts_loader::{self, load::LoadError, Vec3};
-use std::{panic::panic_any, str::FromStr};
+use pts_loader::{self, Vec3};
 
 #[test]
 fn load_valid_file() {

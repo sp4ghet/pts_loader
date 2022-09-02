@@ -5,7 +5,7 @@ use pts_loader;
 
 fn main() -> Result<()> {
     let start = Instant::now();
-    let points = pts_loader::load::from_file("tests/large/ShibuyaUnderground.pts");
+    let points = pts_loader::load::from_file("tests/large/lineCube0119-002.pts");
     let done = Instant::now();
     let dur = done.duration_since(start);
     match points {
