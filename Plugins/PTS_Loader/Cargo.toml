@@ -11,9 +11,9 @@ crate-type = ["lib", "cdylib"]
 path = "src/lib.rs"
 
 [dependencies]
-num = "*"
-num-traits = "*"
-anyhow = "*"
+num = "0.4.0"
+num-traits = "0.2.15"
+anyhow = "1.0.*"
 pbr = "1.0.*"
 rayon = "1.5.*"
 lazy_static = "1.4.*"
